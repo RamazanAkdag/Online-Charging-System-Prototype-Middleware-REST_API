@@ -32,21 +32,20 @@ public class BalanceRepository {
     
     
     public long getUniqueBalanceId() throws SQLException, ClassNotFoundException{
-            Connection conn = OracleDbHelper.getConnection();
+        Connection conn = OracleDbHelper.getConnection();
  
-            String callFunction = "{? = call package_balance.get_balance_id}";
-            CallableStatement cstmt = conn.prepareCall(callFunction);
-            
-            cstmt.registerOutParameter(1, Types.INTEGER);
-            cstmt.execute();
+        String callFunction = "{? = call package_balance.get_balance_id}";
+        CallableStatement cstmt = conn.prepareCall(callFunction);
+          
+        cstmt.registerOutParameter(1, Types.INTEGER);
+        cstmt.execute();
 
-            long balanceId = cstmt.getLong(1);
-            System.out.println(balanceId);
-
-            cstmt.close();
-            conn.close();
-        return balanceId;
+        long balanceId = cstmt.getLong(1);
         
+        cstmt.close();
+        conn.close();
+        
+        return balanceId;
     }
     
     public long getUniquePartitionId() throws ClassNotFoundException, SQLException{
@@ -99,72 +98,72 @@ public class BalanceRepository {
     public long VoltdbCreateBalances(long balanceId, long customerId, long partitionId, long packageId) throws IOException, NoConnectionsException, ProcCallException, SQLException, ClassNotFoundException{
         
        
-            VoltDbHelper voltDbHelper = new VoltDbHelper();
-            Client client = voltDbHelper.client();
+        VoltDbHelper voltDbHelper = new VoltDbHelper();
+        Client client = voltDbHelper.client();
 
-            client.callProcedure("RegisterBalance",customerId,balanceId ,packageId,partitionId,0);
+        client.callProcedure("RegisterBalance",customerId,balanceId ,packageId,partitionId,0);
             //for over-tariff
-            long secondBalanceId = getUniqueBalanceId();
-            client.callProcedure("RegisterBalance", customerId,secondBalanceId, 0 , partitionId,    100);
+        long secondBalanceId = getUniqueBalanceId();
+        client.callProcedure("RegisterBalance", customerId,secondBalanceId, 0 , partitionId,    100);
             
             //oracle tarafına 2. balanceId değerini gönderir
-            return secondBalanceId;    
+        return secondBalanceId;    
     }
     
     public List<RemainingBalance> getBalanceByMSISDN(String MSISDN) throws IOException, NoConnectionsException, ProcCallException, ClassNotFoundException, SQLException {
-    List<RemainingBalance> remainingBalanceForUsers = new ArrayList<>();
-    VoltDbHelper voltDbHelper = new VoltDbHelper();
-    Client client = voltDbHelper.client();
-    ClientResponse response;
-    RemainingBalance balanceForUser = new RemainingBalance();
+        List<RemainingBalance> remainingBalanceForUsers = new ArrayList<>();
+        VoltDbHelper voltDbHelper = new VoltDbHelper();
+        Client client = voltDbHelper.client();
+        ClientResponse response;
+        RemainingBalance balanceForUser = new RemainingBalance();
 
-    response = client.callProcedure("getMSISDNWithId", MSISDN);
-    VoltTable CustomerIdResult = response.getResults()[0];
-    CustomerIdResult.advanceRow();
-    long CUST_ID = CustomerIdResult.getLong(0);
+        response = client.callProcedure("getMSISDNWithId", MSISDN);
+        VoltTable CustomerIdResult = response.getResults()[0];
+        CustomerIdResult.advanceRow();
+        long CUST_ID = CustomerIdResult.getLong(0);
 
-    // Internet 
-    response = client.callProcedure("ShowPackageAmountData", CUST_ID);
-    VoltTable tableDataAmount = response.getResults()[0];
-    BigDecimal data = null ;
-    if (tableDataAmount.advanceRow() && tableDataAmount.advanceRow()) {//2. satıra geç eğer varsa
-       data = tableDataAmount.getDecimalAsBigDecimal(0);  
-        System.out.println(data);
-    } else {// İkinci satır yoksa veya null değer varsa 
+        // Internet 
+        response = client.callProcedure("ShowPackageAmountData", CUST_ID);
+        VoltTable tableDataAmount = response.getResults()[0];
+        BigDecimal data = null ;
+        if (tableDataAmount.advanceRow() && tableDataAmount.advanceRow()) {//2. satıra geç eğer varsa
+           data = tableDataAmount.getDecimalAsBigDecimal(0);  
+            
+        } else {// İkinci satır yoksa veya null değer varsa 
     
         System.out.println("datada 2. satir yok");
-    }
+        }
    
 
-    // Minutes
-    response = client.callProcedure("ShowPackageAmountMinutes", CUST_ID);
-    VoltTable tableMinutesAmount = response.getResults()[0];
-    BigDecimal minute = null;
-    if(tableMinutesAmount.advanceRow() && tableMinutesAmount.advanceRow()){//2. satıra geç
+        // Minutes
+        response = client.callProcedure("ShowPackageAmountMinutes", CUST_ID);
+        VoltTable tableMinutesAmount = response.getResults()[0];
+        BigDecimal minute = null;
+        if(tableMinutesAmount.advanceRow() && tableMinutesAmount.advanceRow()){//2. satıra geç
         
-        minute = tableMinutesAmount.getDecimalAsBigDecimal(0);
-        System.out.println(minute);
-    }else{
-        System.out.println("minutede 2. satır yok");
-    }
+            minute = tableMinutesAmount.getDecimalAsBigDecimal(0);
+           
+        }else{
+            System.out.println("minutede 2. satır yok");
+        }
    
 
-    // SMS
-    response = client.callProcedure("ShowPackageAmountSMS", CUST_ID);
-    VoltTable tableSmsAmount = response.getResults()[0];
-    BigDecimal SMS = null;
-    if(tableSmsAmount.advanceRow() && tableSmsAmount.advanceRow()){//2. satıra geç
+        // SMS
+        response = client.callProcedure("ShowPackageAmountSMS", CUST_ID);
+        VoltTable tableSmsAmount = response.getResults()[0];
+        BigDecimal SMS = null;
+        if(tableSmsAmount.advanceRow() && tableSmsAmount.advanceRow()){//2. satıra geç
        
-        SMS = tableSmsAmount.getDecimalAsBigDecimal(0);
+            SMS = tableSmsAmount.getDecimalAsBigDecimal(0);
         
         
-    }else{
-        System.out.println("SMSde 2. satır yok");
-    }
+        }else{
+            System.out.println("SMSde 2. satır yok");
+        }
     
 
     // Money balance
-    BigDecimal amountMoney = null;
+        BigDecimal amountMoney = null;
     
         response = client.callProcedure("ShowBalanceMoney", CUST_ID);
         VoltTable tableMoneyAmount = response.getResults()[0];
@@ -175,129 +174,129 @@ public class BalanceRepository {
         }
    
     
-    //get package name
-    PackageRepository packageRepository = new PackageRepository();
-    String packageName =  packageRepository.getUserPackage(MSISDN);
+        //get package name
+        PackageRepository packageRepository = new PackageRepository();
+        String packageName =  packageRepository.getUserPackage(MSISDN);
     
-    //get edate 
-    String endDate = getEndDate(CUST_ID);
+        //get edate 
+        String endDate = getEndDate(CUST_ID);
     
-    //get name
-    String FullName = getUserName(CUST_ID);
+        //get name
+        String FullName = getUserName(CUST_ID);
     
-    //get package Amount balances 0->minute  1->SMS  2->data
-    String[] packageAmounts = packageRepository.getPackageAmounts(MSISDN);
+        //get package Amount balances 0->minute  1->SMS  2->data
+        String[] packageAmounts = packageRepository.getPackageAmounts(MSISDN);
     
     
-    balanceForUser.setPackageMinute(Long.parseLong(packageAmounts[0]));
-    balanceForUser.setPackageSms(Long.parseLong(packageAmounts[1]));
-    balanceForUser.setPackageData(Long.parseLong(packageAmounts[2]));
-    balanceForUser.setUsername(FullName);
-    balanceForUser.setEDate(endDate);
-    balanceForUser.setPackageName(packageName);
-    balanceForUser.setMSISDN(MSISDN);
-    balanceForUser.setData(data);
-    balanceForUser.setMinute(minute);
-    balanceForUser.setAmountMoney(amountMoney.longValue());
-    balanceForUser.setSms(SMS);
+        balanceForUser.setPackageMinute(Long.parseLong(packageAmounts[0]));
+        balanceForUser.setPackageSms(Long.parseLong(packageAmounts[1]));
+        balanceForUser.setPackageData(Long.parseLong(packageAmounts[2]));
+        balanceForUser.setUsername(FullName);
+        balanceForUser.setEDate(endDate);
+        balanceForUser.setPackageName(packageName);
+        balanceForUser.setMSISDN(MSISDN);
+        balanceForUser.setData(data);
+        balanceForUser.setMinute(minute);
+        balanceForUser.setAmountMoney(amountMoney.longValue());
+        balanceForUser.setSms(SMS);
     
-    remainingBalanceForUsers.add(balanceForUser);
-    return remainingBalanceForUsers;
-}
+        remainingBalanceForUsers.add(balanceForUser);
+        return remainingBalanceForUsers;
+    }
     
     public RemainingBalance getBalanceByMSISDNandroid(String MSISDN) throws IOException, NoConnectionsException, ProcCallException, ClassNotFoundException, SQLException {
     
-    VoltDbHelper voltDbHelper = new VoltDbHelper();
-    Client client = voltDbHelper.client();
-    ClientResponse response;
-    RemainingBalance balanceForUser = new RemainingBalance();
+        VoltDbHelper voltDbHelper = new VoltDbHelper();
+        Client client = voltDbHelper.client();
+        ClientResponse response;
+        RemainingBalance balanceForUser = new RemainingBalance();
 
-    response = client.callProcedure("getMSISDNWithId", MSISDN);
-    VoltTable CustomerIdResult = response.getResults()[0];
-    CustomerIdResult.advanceRow();
-    long CUST_ID = CustomerIdResult.getLong(0);
+        response = client.callProcedure("getMSISDNWithId", MSISDN);
+        VoltTable CustomerIdResult = response.getResults()[0];
+        CustomerIdResult.advanceRow();
+        long CUST_ID = CustomerIdResult.getLong(0);
 
-    // Internet 
-    response = client.callProcedure("ShowPackageAmountData", CUST_ID);
-    VoltTable tableDataAmount = response.getResults()[0];
-    BigDecimal data = null ;
-    if (tableDataAmount.advanceRow() && tableDataAmount.advanceRow()) {//2. satıra geç eğer varsa
-       data = tableDataAmount.getDecimalAsBigDecimal(0);  
-        System.out.println(data);
-    } else {// İkinci satır yoksa veya null değer varsa 
+        // Internet 
+        response = client.callProcedure("ShowPackageAmountData", CUST_ID);
+        VoltTable tableDataAmount = response.getResults()[0];
+        BigDecimal data = null ;
+        if (tableDataAmount.advanceRow() && tableDataAmount.advanceRow()) {//2. satıra geç eğer varsa
+           data = tableDataAmount.getDecimalAsBigDecimal(0);  
+          
+        } else {// İkinci satır yoksa veya null değer varsa 
     
-        System.out.println("datada 2. satir yok");
-    }
-   
-
-    // Minutes
-    response = client.callProcedure("ShowPackageAmountMinutes", CUST_ID);
-    VoltTable tableMinutesAmount = response.getResults()[0];
-    BigDecimal minute = null;
-    if(tableMinutesAmount.advanceRow() && tableMinutesAmount.advanceRow()){//2. satıra geç
-        
-        minute = tableMinutesAmount.getDecimalAsBigDecimal(0);
-        System.out.println(minute);
-    }else{
-        System.out.println("minutede 2. satır yok");
-    }
-   
-
-    // SMS
-    response = client.callProcedure("ShowPackageAmountSMS", CUST_ID);
-    VoltTable tableSmsAmount = response.getResults()[0];
-    BigDecimal SMS = null;
-    if(tableSmsAmount.advanceRow() && tableSmsAmount.advanceRow()){//2. satıra geç
-       
-        SMS = tableSmsAmount.getDecimalAsBigDecimal(0);
-        
-        
-    }else{
-        System.out.println("SMSde 2. satır yok");
-    }
-    
-
-    // Money balance
-    long amountMoney = 0;
-    if (SMS.equals(BigDecimal.ZERO) || data.equals(BigDecimal.ZERO) || minute.equals(BigDecimal.ZERO)) {
-        response = client.callProcedure("ShowBalanceMoney", CUST_ID);
-        VoltTable tableMoneyAmount = response.getResults()[0];
-        if(tableMoneyAmount.advanceRow()){
-            amountMoney = tableMoneyAmount.getLong(0);
-        }else{
-            System.out.println("Moneyde 2. satır yok");
+            System.out.println("datada 2. satir yok");
         }
+   
+
+        // Minutes
+        response = client.callProcedure("ShowPackageAmountMinutes", CUST_ID);
+        VoltTable tableMinutesAmount = response.getResults()[0];
+        BigDecimal minute = null;
+        if(tableMinutesAmount.advanceRow() && tableMinutesAmount.advanceRow()){//2. satıra geç
+        
+            minute = tableMinutesAmount.getDecimalAsBigDecimal(0);
+            System.out.println(minute);
+        }else{
+            System.out.println("minutede 2. satır yok");
+        }
+   
+
+        // SMS
+        response = client.callProcedure("ShowPackageAmountSMS", CUST_ID);
+        VoltTable tableSmsAmount = response.getResults()[0];
+        BigDecimal SMS = null;
+        if(tableSmsAmount.advanceRow() && tableSmsAmount.advanceRow()){//2. satıra geç
+       
+            SMS = tableSmsAmount.getDecimalAsBigDecimal(0);
+        
+        
+        }else{
+            System.out.println("SMSde 2. satır yok");
+        }
+    
+
+        // Money balance
+        long amountMoney = 0;
+        if (SMS.equals(BigDecimal.ZERO) || data.equals(BigDecimal.ZERO) || minute.equals(BigDecimal.ZERO)) {
+            response = client.callProcedure("ShowBalanceMoney", CUST_ID);
+            VoltTable tableMoneyAmount = response.getResults()[0];
+            if(tableMoneyAmount.advanceRow()){
+                amountMoney = tableMoneyAmount.getLong(0);
+            }else{
+                System.out.println("Moneyde 2. satır yok");
+            }
+        }
+    
+        //get package name
+        PackageRepository packageRepository = new PackageRepository();
+        String packageName =  packageRepository.getUserPackage(MSISDN);
+    
+        //get edate 
+        String endDate = getEndDate(CUST_ID);
+    
+        //get name
+        String FullName = getUserName(CUST_ID);
+    
+        //get package Amount balances 0->minute  1->SMS  2->data
+        String[] packageAmounts = packageRepository.getPackageAmounts(MSISDN);
+    
+    
+        balanceForUser.setPackageMinute(Long.parseLong(packageAmounts[0]));
+        balanceForUser.setPackageSms(Long.parseLong(packageAmounts[1]));
+        balanceForUser.setPackageData(Long.parseLong(packageAmounts[2]));
+        balanceForUser.setUsername(FullName);
+        balanceForUser.setEDate(endDate);
+        balanceForUser.setPackageName(packageName);
+        balanceForUser.setMSISDN(MSISDN);
+        balanceForUser.setData(data);
+        balanceForUser.setMinute(minute);
+        balanceForUser.setAmountMoney(amountMoney);
+        balanceForUser.setSms(SMS);
+    
+    
+        return balanceForUser;
     }
-    
-    //get package name
-    PackageRepository packageRepository = new PackageRepository();
-    String packageName =  packageRepository.getUserPackage(MSISDN);
-    
-    //get edate 
-    String endDate = getEndDate(CUST_ID);
-    
-    //get name
-    String FullName = getUserName(CUST_ID);
-    
-    //get package Amount balances 0->minute  1->SMS  2->data
-    String[] packageAmounts = packageRepository.getPackageAmounts(MSISDN);
-    
-    
-    balanceForUser.setPackageMinute(Long.parseLong(packageAmounts[0]));
-    balanceForUser.setPackageSms(Long.parseLong(packageAmounts[1]));
-    balanceForUser.setPackageData(Long.parseLong(packageAmounts[2]));
-    balanceForUser.setUsername(FullName);
-    balanceForUser.setEDate(endDate);
-    balanceForUser.setPackageName(packageName);
-    balanceForUser.setMSISDN(MSISDN);
-    balanceForUser.setData(data);
-    balanceForUser.setMinute(minute);
-    balanceForUser.setAmountMoney(amountMoney);
-    balanceForUser.setSms(SMS);
-    
-    
-    return balanceForUser;
-}
     
     public String getEndDate(long CustId) throws ClassNotFoundException, SQLException{
         Connection conn = OracleDbHelper.getConnection();
